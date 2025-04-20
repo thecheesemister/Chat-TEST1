@@ -1,20 +1,45 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Firebase Chat</title>
-  <link rel="stylesheet" href="style.css" />
-  <!-- Firebase SDKs -->
-  <script type="module" src="script.js" defer></script>
+  <title>Ably Chat</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; }
+    #chat { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: scroll; margin-bottom: 10px; }
+    .msg { margin-bottom: 8px; }
+  </style>
 </head>
 <body>
-  <div class="chat-container">
-    <div id="chat-box" class="chat-box"></div>
-    <form id="chat-form" class="chat-form">
-      <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off"/>
-      <button type="submit">Send</button>
-    </form>
-  </div>
+  <h2>Live Chat (Ably)</h2>
+  <div id="chat"></div>
+  <input id="name" placeholder="Your name" />
+  <input id="message" placeholder="Type a message" />
+  <button onclick="sendMessage()">Send</button>
+
+  <!-- Ably SDK -->
+  <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+  <script>
+    // 🧩 Replace with your Ably API Key (from your free account)
+    const ably = new Ably.Realtime('YOUR_ABLY_API_KEY'); // Use your public API key
+    const channel = ably.channels.get('chat-room');
+
+    function sendMessage() {
+      const name = document.getElementById("name").value;
+      const message = document.getElementById("message").value;
+      if (name && message) {
+        channel.publish('message', { name, message });
+        document.getElementById("message").value = "";
+      }
+    }
+
+    channel.subscribe('message', (msg) => {
+      const data = msg.data;
+      const msgDiv = document.createElement("div");
+      msgDiv.className = "msg";
+      msgDiv.textContent = `${data.name}: ${data.message}`;
+      document.getElementById("chat").appendChild(msgDiv);
+      document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
+    });
+  </script>
 </body>
 </html>
