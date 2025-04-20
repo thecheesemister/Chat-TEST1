@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Ably Chat</title>
+  <title>Google Auth Chat</title>
   <style>
     body {
       font-family: 'Arial', sans-serif;
@@ -15,7 +15,7 @@
       align-items: center;
       min-height: 100vh;
     }
-    
+
     .container {
       background-color: #fff;
       box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
@@ -87,29 +87,75 @@
     button:hover {
       background-color: #2980b9;
     }
+
+    #login-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    #login-button {
+      padding: 12px 24px;
+      background-color: #db4437;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #login-button:hover {
+      background-color: #c1351d;
+    }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div id="login-container">
+    <button id="login-button" onclick="signInWithGoogle()">Sign in with Google</button>
+  </div>
+
+  <div class="container" style="display: none;" id="chat-container">
     <h2>Live Chat (Ably)</h2>
     <div id="chat"></div>
-    <input id="name" placeholder="Your name" />
     <input id="message" placeholder="Type a message" />
     <button onclick="sendMessage()">Send</button>
   </div>
 
-  <!-- Ably SDK -->
-  <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+  <!-- Google API SDK -->
+  <script src="https://apis.google.com/js/api:client.js"></script>
+
   <script>
-    // Your Ably API Key
+    // Set up Google API client
+    let googleUser = null;
+    const clientId = "1021549645913-ju1o6uis0bgj99brbhphj8tso0cl2sib.apps.googleusercontent.com"; // Replace with your Google Client ID
+    let userName = "";
+
+    function signInWithGoogle() {
+      const auth2 = gapi.auth2.init({
+        client_id: clientId,
+        cookiepolicy: 'single_host_origin',
+        scope: 'profile email'
+      });
+
+      auth2.signIn().then(function(googleUserObj) {
+        googleUser = googleUserObj.getBasicProfile();
+        userName = googleUser.getEmail();  // Use email as username
+        document.getElementById('login-container').style.display = 'none';
+        document.getElementById('chat-container').style.display = 'block';
+        console.log('Signed in as:', userName);
+      });
+    }
+
+    // Ably setup for chat
     const ably = new Ably.Realtime('DzH_IA.srBHdw:QKajb5GPaN6xCQLKHtZybph5FKAhBgA5rVtRQyj0Gn4');
     const channel = ably.channels.get('chat-room');
 
     function sendMessage() {
-      const name = document.getElementById("name").value;
       const message = document.getElementById("message").value;
-      if (name && message) {
-        channel.publish('message', { name, message });
+      if (userName && message) {
+        channel.publish('message', { name: userName, message: message });
         document.getElementById("message").value = "";
       }
     }
@@ -118,11 +164,22 @@
       const data = msg.data;
       const msgDiv = document.createElement("div");
       msgDiv.className = "msg";
-      msgDiv.classList.add(data.name === document.getElementById("name").value ? "user-msg" : "other-msg");
+      msgDiv.classList.add(data.name === userName ? "user-msg" : "other-msg");
       msgDiv.textContent = `${data.name}: ${data.message}`;
       document.getElementById("chat").appendChild(msgDiv);
       document.getElementById("chat").scrollTop = document.getElementById("chat").scrollHeight;
     });
+
+    // Load the Google API client after the page is loaded
+    function handleClientLoad() {
+      gapi.load('auth2', function() {
+        gapi.auth2.init({
+          client_id: clientId
+        });
+      });
+    }
+    
+    window.onload = handleClientLoad;
   </script>
 </body>
 </html>
