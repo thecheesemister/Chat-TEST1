@@ -37,6 +37,7 @@
       margin-bottom: 20px;
       border-radius: 8px;
       background-color: #fafafa;
+      scroll-behavior: smooth;
     }
     .msg {
       margin-bottom: 12px;
@@ -171,18 +172,18 @@
     const API_KEY = 'Gl5tWVEBLD73PT1VINwqZQv4vRp7HLcA';
     const ably = new Ably.Realtime('DzH_IA.srBHdw:QKajb5GPaN6xCQLKHtZybph5FKAhBgA5rVtRQyj0Gn4');
     const channel = ably.channels.get('chat-room');
-    let hasJoined=false, locked=false, darkMode=false;
-    const chatEl=document.getElementById('chat');
-    const nameInput=document.getElementById('name');
-    const messageInput=document.getElementById('message');
-    const recipientInput=document.getElementById('recipient');
-    const typingIndicator=document.getElementById('typingIndicator');
-    const passwordModal=document.getElementById('passwordModal');
-    const adminModal=document.getElementById('adminModal');
-    const gifModal=document.getElementById('gifModal');
-    const gifResults=document.getElementById('gifResults');
+    let hasJoined = false, locked = false, darkMode = false;
+    const chatEl = document.getElementById('chat');
+    const nameInput = document.getElementById('name');
+    const messageInput = document.getElementById('message');
+    const recipientInput = document.getElementById('recipient');
+    const typingIndicator = document.getElementById('typingIndicator');
+    const passwordModal = document.getElementById('passwordModal');
+    const adminModal = document.getElementById('adminModal');
+    const gifModal = document.getElementById('gifModal');
+    const gifResults = document.getElementById('gifResults');
 
-    const facts=[
+    const facts = [
       "Honey never spoils.",
       "Bananas are berries, but strawberries aren’t.",
       "A day on Venus is longer than a year on Venus.",
@@ -191,178 +192,218 @@
     ];
 
     // Initial password gate
-    window.onload=() => { passwordModal.style.display='flex'; };
+    window.onload = () => { passwordModal.style.display = 'flex'; };
+
     function checkPassword(){
-      if(document.getElementById('passwordInput').value==='Goldfish3000'){
-        passwordModal.style.display='none';
+      if(document.getElementById('passwordInput').value === 'Goldfish3000'){
+        passwordModal.style.display = 'none';
         alert('Password accepted!');
-      } else alert('Incorrect password.');
+      } else {
+        alert('Incorrect password.');
+      }
     }
-    nameInput.addEventListener('blur',()=>{
-      const u=nameInput.value.trim();
-      if(!u||hasJoined) return;
-      if(u.toUpperCase()==='ADMIN'){
-        adminModal.style.display='flex';
-        document.getElementById('adminPassword').value='';
+
+    nameInput.addEventListener('blur', () => {
+      const u = nameInput.value.trim();
+      if(!u || hasJoined) return;
+      if(u.toUpperCase() === 'ADMIN'){
+        adminModal.style.display = 'flex';
+        document.getElementById('adminPassword').value = '';
       } else enterPresence(u);
     });
+
     function checkAdminPassword(){
-      if(document.getElementById('adminPassword').value==='06182011$'){
-        adminModal.style.display='none';
+      if(document.getElementById('adminPassword').value === '06182011$'){
+        adminModal.style.display = 'none';
         enterPresence('ADMIN');
       } else {
         alert('Incorrect password. Refreshing...');
         location.reload();
       }
     }
+
     function enterPresence(name){
       channel.presence.enter({ name });
-      hasJoined=true;
+      hasJoined = true;
     }
 
     // Typing indicator
     let typingTimeout;
-    messageInput.addEventListener('input',()=>{
-      if(!hasJoined||locked) return;
+    messageInput.addEventListener('input', () => {
+      if(!hasJoined || locked) return;
       clearTimeout(typingTimeout);
-      channel.publish('typing',{ name:nameInput.value });
-      typingTimeout=setTimeout(()=>{
-        channel.publish('stopTyping',{ name:nameInput.value });
-      },1000);
+      channel.publish('typing', { name: nameInput.value });
+      typingTimeout = setTimeout(() => {
+        channel.publish('stopTyping', { name: nameInput.value });
+      }, 1000);
     });
-    channel.subscribe('typing',msg=>{
-      if(msg.data.name!==nameInput.value) typingIndicator.style.display='block';
+    channel.subscribe('typing', msg => {
+      if(msg.data.name !== nameInput.value) typingIndicator.style.display = 'block';
     });
-    channel.subscribe('stopTyping',msg=>{
-      if(msg.data.name!==nameInput.value) typingIndicator.style.display='none';
+    channel.subscribe('stopTyping', msg => {
+      if(msg.data.name !== nameInput.value) typingIndicator.style.display = 'none';
+    });
+
+    // Presence join/leave announcements
+    channel.presence.subscribe('enter', member => {
+      if(member.data.name !== nameInput.value.trim()) {
+        appendMessage('System', `${member.data.name} joined`, 'system');
+      }
+    });
+    channel.presence.subscribe('leave', member => {
+      appendMessage('System', `${member.data.name} left`, 'system');
     });
 
     // Send or command
     function sendMessage(){
-      const name=nameInput.value.trim();
-      const raw=messageInput.value.trim();
-      const to=recipientInput.value.trim();
-      if(!name||!raw) return;
-      if(locked&&name.toLowerCase()!=='admin'){
+      if(passwordModal.style.display === 'flex') return;
+      const name = nameInput.value.trim();
+      const raw = messageInput.value.trim();
+      const to = recipientInput.value.trim();
+      if(!name || !raw) return;
+      if(locked && name.toLowerCase() !== 'admin'){
         alert('Chat is locked!'); return;
       }
       // Private
       if(to){
-        channel.publish('private-message',{ from:name, to, message:raw });
-        messageInput.value=''; return;
+        channel.publish('private-message', { from: name, to, message: raw });
+        messageInput.value = '';
+        messageInput.focus();
+        return;
       }
-      const cmd=raw.toUpperCase();
-      // Everyone
-      if(cmd==='!HELP'){
-        channel.publish('message',{ name:'System', message:'Everyone: !help, !roll, !fact — Admin: !lock, !unlock, !clear, !theme' });
-        messageInput.value=''; return;
-      }
-      if(cmd==='!ROLL'){
+      const cmd = raw.toUpperCase();
+      // Everyone commands
+      if(cmd === '!HELP'){
+        channel.publish('message', { name:'System', message:'Everyone: !help, !roll, !fact — Admin: !lock, !unlock, !clear, !theme' });
+      } else if(cmd === '!ROLL'){
         const roll=Math.floor(Math.random()*100)+1;
-        channel.publish('message',{ name:'System', message:`${name} rolled a ${roll} 🎲` });
-        messageInput.value=''; return;
-      }
-      if(cmd==='!FACT'){
+        channel.publish('message', { name:'System', message:`${name} rolled a ${roll} 🎲` });
+      } else if(cmd === '!FACT'){
         const fact=facts[Math.floor(Math.random()*facts.length)];
-        channel.publish('message',{ name:'System', message:fact });
-        messageInput.value=''; return;
+        channel.publish('message', { name:'System', message:fact });
       }
-      // Admin
-      if(name.toLowerCase()==='admin'){
-        if(cmd==='!CLEAR'){ channel.publish('clear',{}); messageInput.value=''; return; }
-        if(cmd==='!LOCK'){ channel.publish('lock',{}); messageInput.value=''; return; }
-        if(cmd==='!UNLOCK'){ channel.publish('unlock',{}); messageInput.value=''; return; }
-        if(cmd==='!THEME'){ channel.publish('theme',{}); messageInput.value=''; return; }
-        if(cmd==='!RESTART'){ channel.publish('restart',{}); messageInput.value=''; return; }
+      // Admin commands
+      else if(name.toLowerCase() === 'admin'){
+        if(cmd === '!CLEAR'){ channel.publish('clear', {}); }
+        else if(cmd === '!LOCK'){ channel.publish('lock', {}); }
+        else if(cmd === '!UNLOCK'){ channel.publish('unlock', {}); }
+        else if(cmd === '!THEME'){ channel.publish('theme', {}); }
+        else if(cmd === '!RESTART'){ channel.publish('restart', {}); }
       }
-      // Public
-      channel.publish('message',{ name, message:raw });
-      messageInput.value='';
+      // Regular public
+      else {
+        channel.publish('message', { name, message: raw });
+      }
+      messageInput.value = '';
+      messageInput.focus();
     }
 
-    // Append message helpers
-    function appendMessage(name,text,type='message'){
-      const div=document.createElement('div');
-      div.classList.add(type==='message'?'msg':type+'-msg');
-      const up=name.toUpperCase();
-      if(up==='ADMIN') div.classList.add('admin-msg');
-      else if(name==='System') div.classList.add('system-msg');
-      else if(type==='message')
-        div.classList.add(name===nameInput.value.trim()?'user-msg':'other-msg');
+    // Append message helpers with timestamp
+    function appendMessage(name, text, type='message'){
+      const div = document.createElement('div');
+      div.classList.add(type === 'message' ? 'msg' : type + '-msg');
+      const up = name.toUpperCase();
+      if(up === 'ADMIN') div.classList.add('admin-msg');
+      else if(name === 'System') div.classList.add('system-msg');
+      else if(type === 'message')
+        div.classList.add(name === nameInput.value.trim() ? 'user-msg' : 'other-msg');
       if(darkMode) div.classList.add('dark-mode');
-      // handle GIF embed
+
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      // GIF?
       if(text.startsWith('[GIF]')){
-        const url=text.slice(5).trim();
-        div.innerHTML=`<strong>${name}:</strong><br>`;
-        const img=document.createElement('img');
-        img.src=url;
-        img.style.maxWidth='100%';
+        const url = text.slice(5).trim();
+        div.innerHTML = `<strong>${name}</strong> <small>${time}</small><br>`;
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.maxWidth = '100%';
         div.appendChild(img);
       } else {
-        div.textContent=`${name}: ${text}`;
+        div.innerHTML = `<strong>${name}</strong> <small>${time}</small><br>${text}`;
       }
+
       chatEl.appendChild(div);
-      chatEl.scrollTop=chatEl.scrollHeight;
+      chatEl.scrollTop = chatEl.scrollHeight;
     }
+
+    // Append private with timestamp
     function appendPrivate(data){
-      const me=nameInput.value.trim();
-      if(data.to!==me&&data.from!==me) return;
-      const div=document.createElement('div');
+      const me = nameInput.value.trim();
+      if(data.to !== me && data.from !== me) return;
+      const div = document.createElement('div');
       div.classList.add('private-msg');
       if(darkMode) div.classList.add('dark-mode');
-      const label=`${data.from} → ${data.to}`;
-      div.textContent=`${label}: ${data.message}`;
-      if(data.from===me) div.style.textAlign='right';
+      const label = `${data.from} → ${data.to}`;
+      const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      div.innerHTML = `<strong>${label}</strong> <small>${time}</small><br>${data.message}`;
+      if(data.from === me) div.style.textAlign = 'right';
       chatEl.appendChild(div);
-      chatEl.scrollTop=chatEl.scrollHeight;
+      chatEl.scrollTop = chatEl.scrollHeight;
     }
 
     // Subscriptions
-    channel.subscribe('message',msg=>appendMessage(msg.data.name,msg.data.message,'message'));
-    channel.subscribe('private-message',msg=>appendPrivate(msg.data));
-    channel.subscribe('clear',()=>{ chatEl.innerHTML=''; });
-    channel.subscribe('lock',()=>{ locked=true; appendMessage('System','Chat has been LOCKED by Admin 🔒','system'); });
-    channel.subscribe('unlock',()=>{ locked=false; appendMessage('System','Chat has been UNLOCKED by Admin 🔓','system'); });
-    channel.subscribe('theme',()=>{ toggleTheme(); appendMessage('System','Theme toggled by Admin 🌗','system'); });
-    channel.subscribe('restart',()=>{ alert('Admin triggered a restart. Refreshing...'); location.reload(); });
+    channel.subscribe('message', msg => appendMessage(msg.data.name, msg.data.message, 'message'));
+    channel.subscribe('private-message', msg => appendPrivate(msg.data));
+    channel.subscribe('clear', () => { chatEl.innerHTML = ''; });
+    channel.subscribe('lock', () => { locked = true; appendMessage('System','Chat has been LOCKED by Admin 🔒','system'); });
+    channel.subscribe('unlock', () => { locked = false; appendMessage('System','Chat has been UNLOCKED by Admin 🔓','system'); });
+    channel.subscribe('theme', () => { toggleTheme(); appendMessage('System','Theme toggled by Admin 🌗','system'); });
+    channel.subscribe('restart', () => { alert('Admin triggered a restart. Refreshing...'); location.reload(); });
 
     // Theme toggle
+    const themeBtn = document.getElementById('themeButton');
     function toggleTheme(){
-      darkMode=!darkMode;
-      document.body.classList.toggle('dark-mode',darkMode);
-      document.querySelector('.container').classList.toggle('dark-mode',darkMode);
-      document.querySelectorAll('.msg, .private-msg').forEach(el=>el.classList.toggle('dark-mode',darkMode));
+      darkMode = !darkMode;
+      document.body.classList.toggle('dark-mode', darkMode);
+      document.querySelector('.container').classList.toggle('dark-mode', darkMode);
+      document.querySelectorAll('.msg, .private-msg').forEach(el => el.classList.toggle('dark-mode', darkMode));
+      themeBtn.textContent = darkMode ? '☀️ Light Mode' : '🌙 Dark Mode';
     }
 
     // GIF modal controls
     function openGifModal(){
-      gifResults.innerHTML='';
-      document.getElementById('gifSearch').value='';
-      gifModal.style.display='flex';
+      gifResults.innerHTML = '';
+      document.getElementById('gifSearch').value = '';
+      gifModal.style.display = 'flex';
     }
     function closeGifModal(){
-      gifModal.style.display='none';
+      gifModal.style.display = 'none';
     }
     function searchGifs(){
-      const q=document.getElementById('gifSearch').value.trim();
+      const q = document.getElementById('gifSearch').value.trim();
       if(!q) return;
       fetch(`https://api.giphy.com/v1/gifs/search?api_key=${API_KEY}&q=${encodeURIComponent(q)}&limit=12`)
-        .then(res=>res.json())
-        .then(json=>{
-          gifResults.innerHTML='';
-          json.data.forEach(g=>{
-            const thumb=g.images.fixed_width_small.url;
-            const full=g.images.downsized_medium.url;
-            const img=document.createElement('img');
-            img.src=thumb;
-            img.onclick=()=> {
-              channel.publish('message',{ name:nameInput.value.trim(), message:`[GIF] ${full}` });
+        .then(res => res.json())
+        .then(json => {
+          gifResults.innerHTML = '';
+          json.data.forEach(g => {
+            const thumb = g.images.fixed_width_small.url;
+            const full = g.images.downsized_medium.url;
+            const img = document.createElement('img');
+            img.src = thumb;
+            img.onclick = () => {
+              channel.publish('message',{ name: nameInput.value.trim(), message: `[GIF] ${full}` });
               closeGifModal();
             };
             gifResults.appendChild(img);
           });
         });
     }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', e => {
+      if(e.key === 'Escape'){
+        closeGifModal();
+        adminModal.style.display = 'none';
+        passwordModal.style.display = 'none';
+      }
+      if(e.key === 'Enter' && document.activeElement === messageInput){
+        sendMessage();
+      }
+      if(e.ctrlKey && e.key.toLowerCase() === 'g'){
+        openGifModal();
+      }
+    });
   </script>
 </body>
 </html>
