@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>CHAT!?!?!?!?!</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f4f7f6;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      padding: 20px;
+      width: 100%;
+      max-width: 500px;
+      border: 1px solid #ddd;
+    }
+    h2 {
+      text-align: center;
+      font-size: 24px;
+      color: #2c3e50;
+    }
+    #chat {
+      border: 1px solid #ddd;
+      padding: 10px;
+      height: 300px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      background-color: #fafafa;
+    }
+    .msg {
+      margin-bottom: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      background-color: #ecf0f1;
+      transition: background-color 0.3s ease;
+    }
+    .msg:hover { background-color: #d0d8df; }
+    .user-msg { background-color: #3498db; color: white; text-align: right; }
+    .other-msg { background-color: #95a5a6; color: white; text-align: left; }
+    .admin-msg { background-color: #e74c3c; color: white; text-align: center; font-weight: bold; }
+    .system-msg { background-color: #9b59b6; color: white; text-align: center; font-style: italic; }
+    .private-msg {
+      background-color: #2ecc71; color: white; padding: 10px; border-radius: 6px; margin-bottom: 12px;
+      transition: background-color 0.3s ease;
+    }
+    .private-msg.dark-mode { background-color: #27ae60; }
+    input, .controls input {
+      padding: 10px; margin: 8px 0; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;
+    }
+    input { width: calc(100% - 22px); }
+    button {
+      padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 6px;
+      cursor: pointer; width: 100%;
+    }
+    button:hover { background-color: #2980b9; }
+    #typingIndicator { font-style: italic; color: #3498db; display: none; }
+
+    /* Admin/password modals */
+    #adminModal, #passwordModal {
+      display: none; position: fixed; z-index: 9999; top: 0; left: 0;
+      width: 100vw; height: 100vh; background: rgba(0,0,0,1);
+      justify-content: center; align-items: center;
+    }
+    #adminModalContent, #passwordModalContent {
+      background: #fff; padding: 30px; border-radius: 10px; width: 90%; max-width: 400px; text-align: center;
+    }
+    #adminModalContent input, #passwordModalContent input,
+    #adminModalContent button, #passwordModalContent button {
+      width: 100%; margin-top: 15px;
+    }
+
+    /* GIF modal */
+    #gifModal {
+      display: none; position: fixed; z-index: 9998; top: 0; left: 0;
+      width: 100vw; height: 100vh; background: rgba(0,0,0,0.8);
+      justify-content: center; align-items: center;
+    }
+    #gifModalContent {
+      background: #fff; border-radius: 8px; padding: 20px; width: 90%; max-width: 600px;
+      max-height: 80vh; overflow-y: auto; position: relative;
+    }
+    #gifModalContent h3 { margin-top: 0; }
+    #gifModalContent input { width: calc(100% - 22px); }
+    #gifResults {
+      display: grid; grid-template-columns: repeat(auto-fill,minmax(100px,1fr));
+      gap: 10px; margin-top: 10px;
+    }
+    #gifResults img {
+      width: 100%; height: auto; cursor: pointer; border-radius: 4px;
+    }
+    #closeGifModal {
+      position: absolute; top: 10px; right: 10px; background: #e74c3c; padding: 5px 10px;
+      border: none; color: white; border-radius: 4px; cursor: pointer;
+    }
+
+    /* Controls row */
+    .controls {
+      display: flex; align-items: center; margin-top: 10px; gap: 8px;
+    }
+    .controls input { width: 120px; margin-left: auto; }
+
+    /* Dark mode */
+    body.dark-mode { background-color: #1c1c1c; color: #ecf0f1; }
+    .container.dark-mode { background-color: #2c3e50; border: 1px solid #34495e; }
+    .msg.dark-mode { background-color: #34495e; color: #ecf0f1; }
+    .user-msg.dark-mode { background-color: #2980b9; color: white; }
+    .other-msg.dark-mode { background-color: #7f8c8d; color: white; }
+    .admin-msg.dark-mode { background-color: #c0392b; color: white; }
+    .system-msg.dark-mode { background-color: #8e44ad; color: white; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>diddy gang group chat</h2>
+    <div id="chat"></div>
+    <div id="typingIndicator">Someone is typing...</div>
+
+    <input id="name" placeholder="Your name" />
+    <input id="message" placeholder="Type a message" />
+    <button onclick="sendMessage()">Send</button>
+
+    <div class="controls">
+      <button id="openGifBtn" onclick="openGifModal()">GIF</button>
+      <button id="themeButton" onclick="toggleTheme()">Toggle Dark Mode</button>
+      <input id="recipient" placeholder="Recipient (blank for all)" />
+    </div>
+  </div>
+
+  <!-- Admin & password modals -->
+  <div id="adminModal">
+    <div id="adminModalContent">
+      <h3>ADMIN Access</h3>
+      <p>Enter the admin password:</p>
+      <input type="password" id="adminPassword" placeholder="Password" />
+      <button onclick="checkAdminPassword()">Submit</button>
+    </div>
+  </div>
+  <div id="passwordModal">
+    <div id="passwordModalContent">
+      <h3>Enter Password</h3>
+      <p>Please enter the password:</p>
+      <input type="password" id="passwordInput" placeholder="Password" />
+      <button onclick="checkPassword()">Submit</button>
+    </div>
+  </div>
+
+  <!-- GIPHY Search Modal -->
+  <div id="gifModal">
+    <div id="gifModalContent">
+      <button id="closeGifModal" onclick="closeGifModal()">X</button>
+      <h3>Search GIFs</h3>
+      <input id="gifSearch" placeholder="e.g. cat" />
+      <button onclick="searchGifs()">Search</button>
+      <div id="gifResults"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
+  <script>
+    const API_KEY = 'Gl5tWVEBLD73PT1VINwqZQv4vRp7HLcA';
+    const ably = new Ably.Realtime('DzH_IA.srBHdw:QKajb5GPaN6xCQLKHtZybph5FKAhBgA5rVtRQyj0Gn4');
+    const channel = ably.channels.get('chat-room');
+    let hasJoined=false, locked=false, darkMode=false;
+    const chatEl=document.getElementById('chat');
+    const nameInput=document.getElementById('name');
+    const messageInput=document.getElementById('message');
+    const recipientInput=document.getElementById('recipient');
+    const typingIndicator=document.getElementById('typingIndicator');
+    const passwordModal=document.getElementById('passwordModal');
+    const adminModal=document.getElementById('adminModal');
+    const gifModal=document.getElementById('gifModal');
+    const gifResults=document.getElementById('gifResults');
+
+    const facts=[
+      "Honey never spoils.",
+      "Bananas are berries, but strawberries aren’t.",
+      "A day on Venus is longer than a year on Venus.",
+      "Octopuses have three hearts.",
+      "There are more trees on Earth than stars in the Milky Way."
+    ];
+
+    // Initial password gate
+    window.onload=() => { passwordModal.style.display='flex'; };
+    function checkPassword(){
+      if(document.getElementById('passwordInput').value==='Goldfish3000'){
+        passwordModal.style.display='none';
+        alert('Password accepted!');
+      } else alert('Incorrect password.');
+    }
+    nameInput.addEventListener('blur',()=>{
+      const u=nameInput.value.trim();
+      if(!u||hasJoined) return;
+      if(u.toUpperCase()==='ADMIN'){
+        adminModal.style.display='flex';
+        document.getElementById('adminPassword').value='';
+      } else enterPresence(u);
+    });
+    function checkAdminPassword(){
+      if(document.getElementById('adminPassword').value==='06182011$'){
+        adminModal.style.display='none';
+        enterPresence('ADMIN');
+      } else {
+        alert('Incorrect password. Refreshing...');
+        location.reload();
+      }
+    }
+    function enterPresence(name){
+      channel.presence.enter({ name });
+      hasJoined=true;
+    }
+
+    // Typing indicator
+    let typingTimeout;
+    messageInput.addEventListener('input',()=>{
+      if(!hasJoined||locked) return;
+      clearTimeout(typingTimeout);
+      channel.publish('typing',{ name:nameInput.value });
+      typingTimeout=setTimeout(()=>{
+        channel.publish('stopTyping',{ name:nameInput.value });
+      },1000);
+    });
+    channel.subscribe('typing',msg=>{
+      if(msg.data.name!==nameInput.value) typingIndicator.style.display='block';
+    });
+    channel.subscribe('stopTyping',msg=>{
+      if(msg.data.name!==nameInput.value) typingIndicator.style.display='none';
+    });
+
+    // Send or command
+    function sendMessage(){
+      const name=nameInput.value.trim();
+      const raw=messageInput.value.trim();
+      const to=recipientInput.value.trim();
+      if(!name||!raw) return;
+      if(locked&&name.toLowerCase()!=='admin'){
+        alert('Chat is locked!'); return;
+      }
+      // Private
+      if(to){
+        channel.publish('private-message',{ from:name, to, message:raw });
+        messageInput.value=''; return;
+      }
+      const cmd=raw.toUpperCase();
+      // Everyone
+      if(cmd==='!HELP'){
+        channel.publish('message',{ name:'System', message:'Everyone: !help, !roll, !fact — Admin: !lock, !unlock, !clear, !theme' });
+        messageInput.value=''; return;
+      }
+      if(cmd==='!ROLL'){
+        const roll=Math.floor(Math.random()*100)+1;
+        channel.publish('message',{ name:'System', message:`${name} rolled a ${roll} 🎲` });
+        messageInput.value=''; return;
+      }
+      if(cmd==='!FACT'){
+        const fact=facts[Math.floor(Math.random()*facts.length)];
+        channel.publish('message',{ name:'System', message:fact });
+        messageInput.value=''; return;
+      }
+      // Admin
+      if(name.toLowerCase()==='admin'){
+        if(cmd==='!CLEAR'){ channel.publish('clear',{}); messageInput.value=''; return; }
+        if(cmd==='!LOCK'){ channel.publish('lock',{}); messageInput.value=''; return; }
+        if(cmd==='!UNLOCK'){ channel.publish('unlock',{}); messageInput.value=''; return; }
+        if(cmd==='!THEME'){ channel.publish('theme',{}); messageInput.value=''; return; }
+        if(cmd==='!RESTART'){ channel.publish('restart',{}); messageInput.value=''; return; }
+      }
+      // Public
+      channel.publish('message',{ name, message:raw });
+      messageInput.value='';
+    }
+
+    // Append message helpers
+    function appendMessage(name,text,type='message'){
+      const div=document.createElement('div');
+      div.classList.add(type==='message'?'msg':type+'-msg');
+      const up=name.toUpperCase();
+      if(up==='ADMIN') div.classList.add('admin-msg');
+      else if(name==='System') div.classList.add('system-msg');
+      else if(type==='message')
+        div.classList.add(name===nameInput.value.trim()?'user-msg':'other-msg');
+      if(darkMode) div.classList.add('dark-mode');
+      // handle GIF embed
+      if(text.startsWith('[GIF]')){
+        const url=text.slice(5).trim();
+        div.innerHTML=`<strong>${name}:</strong><br>`;
+        const img=document.createElement('img');
+        img.src=url;
+        img.style.maxWidth='100%';
+        div.appendChild(img);
+      } else {
+        div.textContent=`${name}: ${text}`;
+      }
+      chatEl.appendChild(div);
+      chatEl.scrollTop=chatEl.scrollHeight;
+    }
+    function appendPrivate(data){
+      const me=nameInput.value.trim();
+      if(data.to!==me&&data.from!==me) return;
+      const div=document.createElement('div');
+      div.classList.add('private-msg');
+      if(darkMode) div.classList.add('dark-mode');
+      const label=`${data.from} → ${data.to}`;
+      div.textContent=`${label}: ${data.message}`;
+      if(data.from===me) div.style.textAlign='right';
+      chatEl.appendChild(div);
+      chatEl.scrollTop=chatEl.scrollHeight;
+    }
+
+    // Subscriptions
+    channel.subscribe('message',msg=>appendMessage(msg.data.name,msg.data.message,'message'));
+    channel.subscribe('private-message',msg=>appendPrivate(msg.data));
+    channel.subscribe('clear',()=>{ chatEl.innerHTML=''; });
+    channel.subscribe('lock',()=>{ locked=true; appendMessage('System','Chat has been LOCKED by Admin 🔒','system'); });
+    channel.subscribe('unlock',()=>{ locked=false; appendMessage('System','Chat has been UNLOCKED by Admin 🔓','system'); });
+    channel.subscribe('theme',()=>{ toggleTheme(); appendMessage('System','Theme toggled by Admin 🌗','system'); });
+    channel.subscribe('restart',()=>{ alert('Admin triggered a restart. Refreshing...'); location.reload(); });
+
+    // Theme toggle
+    function toggleTheme(){
+      darkMode=!darkMode;
+      document.body.classList.toggle('dark-mode',darkMode);
+      document.querySelector('.container').classList.toggle('dark-mode',darkMode);
+      document.querySelectorAll('.msg, .private-msg').forEach(el=>el.classList.toggle('dark-mode',darkMode));
+    }
+
+    // GIF modal controls
+    function openGifModal(){
+      gifResults.innerHTML='';
+      document.getElementById('gifSearch').value='';
+      gifModal.style.display='flex';
+    }
+    function closeGifModal(){
+      gifModal.style.display='none';
+    }
+    function searchGifs(){
+      const q=document.getElementById('gifSearch').value.trim();
+      if(!q) return;
+      fetch(`https://api.giphy.com/v1/gifs/search?api_key=${API_KEY}&q=${encodeURIComponent(q)}&limit=12`)
+        .then(res=>res.json())
+        .then(json=>{
+          gifResults.innerHTML='';
+          json.data.forEach(g=>{
+            const thumb=g.images.fixed_width_small.url;
+            const full=g.images.downsized_medium.url;
+            const img=document.createElement('img');
+            img.src=thumb;
+            img.onclick=()=> {
+              channel.publish('message',{ name:nameInput.value.trim(), message:`[GIF] ${full}` });
+              closeGifModal();
+            };
+            gifResults.appendChild(img);
+          });
+        });
+    }
+  </script>
+</body>
+</html>
