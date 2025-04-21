@@ -49,45 +49,50 @@
       background-color: #ecf0f1;
       transition: background-color 0.3s ease;
     }
-
-    .msg:hover {
-      background-color: #d0d8df;
-    }
+    .msg:hover { background-color: #d0d8df; }
 
     .user-msg {
       background-color: #3498db;
       color: white;
       text-align: right;
     }
-
     .other-msg {
       background-color: #95a5a6;
       color: white;
       text-align: left;
     }
-
     .admin-msg {
       background-color: #e74c3c;
       color: white;
       text-align: center;
       font-weight: bold;
     }
-
     .system-msg {
       background-color: #9b59b6;
       color: white;
       text-align: center;
       font-style: italic;
     }
-
-    input {
+    .private-msg {
+      background-color: #2ecc71;
+      color: white;
       padding: 10px;
-      width: calc(100% - 22px);
+      border-radius: 6px;
+      margin-bottom: 12px;
+      transition: background-color 0.3s ease;
+    }
+    .private-msg.dark-mode {
+      background-color: #27ae60;
+    }
+
+    input, .controls input {
+      padding: 10px;
       margin: 8px 0;
       border-radius: 6px;
       border: 1px solid #ddd;
+      font-size: 14px;
     }
-
+    input { width: calc(100% - 22px); }
     button {
       padding: 10px 20px;
       background-color: #3498db;
@@ -97,10 +102,7 @@
       cursor: pointer;
       width: 100%;
     }
-
-    button:hover {
-      background-color: #2980b9;
-    }
+    button:hover { background-color: #2980b9; }
 
     #typingIndicator {
       font-style: italic;
@@ -112,15 +114,12 @@
       display: none;
       position: fixed;
       z-index: 9999;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
       background: rgba(0, 0, 0, 1);
       justify-content: center;
       align-items: center;
     }
-
     #adminModalContent, #passwordModalContent {
       background: #fff;
       padding: 30px;
@@ -129,71 +128,31 @@
       max-width: 400px;
       text-align: center;
     }
-
-    #adminModalContent h3, #passwordModalContent h3 {
-      margin-bottom: 15px;
-    }
-
-    #adminModalContent input, #passwordModalContent input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 10px;
-    }
-
+    #adminModalContent input, #passwordModalContent input,
     #adminModalContent button, #passwordModalContent button {
       width: 100%;
       margin-top: 15px;
     }
 
-    body.dark-mode {
-      background-color: #1c1c1c;
-      color: #ecf0f1;
-    }
-
-    .container.dark-mode {
-      background-color: #2c3e50;
-      border: 1px solid #34495e;
-    }
-
-    .msg.dark-mode {
-      background-color: #34495e;
-      color: #ecf0f1;
-    }
-
-    .user-msg.dark-mode {
-      background-color: #2980b9;
-      color: white;
-    }
-
-    .other-msg.dark-mode {
-      background-color: #7f8c8d;
-      color: white;
-    }
-
-    .admin-msg.dark-mode {
-      background-color: #c0392b;
-      color: white;
-    }
-
-    .system-msg.dark-mode {
-      background-color: #8e44ad;
-      color: white;
-    }
-
-    #themeButton {
-      padding: 5px 10px;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      width: auto;
+    /* Controls row: theme + recipient */
+    .controls {
+      display: flex;
+      align-items: center;
       margin-top: 10px;
     }
-
-    #themeButton:hover {
-      background-color: #2980b9;
+    .controls input {
+      width: 120px;
+      margin-left: 10px;
     }
+
+    /* Dark mode */
+    body.dark-mode { background-color: #1c1c1c; color: #ecf0f1; }
+    .container.dark-mode { background-color: #2c3e50; border: 1px solid #34495e; }
+    .msg.dark-mode { background-color: #34495e; color: #ecf0f1; }
+    .user-msg.dark-mode { background-color: #2980b9; color: white; }
+    .other-msg.dark-mode { background-color: #7f8c8d; color: white; }
+    .admin-msg.dark-mode { background-color: #c0392b; color: white; }
+    .system-msg.dark-mode { background-color: #8e44ad; color: white; }
   </style>
 </head>
 <body>
@@ -201,12 +160,18 @@
     <h2>diddy gang group chat</h2>
     <div id="chat"></div>
     <div id="typingIndicator">Someone is typing...</div>
+
     <input id="name" placeholder="Your name" />
     <input id="message" placeholder="Type a message" />
     <button onclick="sendMessage()">Send</button>
-    <button id="themeButton" onclick="toggleTheme()">Toggle Dark Mode</button>
+
+    <div class="controls">
+      <button id="themeButton" onclick="toggleTheme()">Toggle Dark Mode</button>
+      <input id="recipient" placeholder="Recipient (blank for all)" />
+    </div>
   </div>
 
+  <!-- Modals -->
   <div id="adminModal">
     <div id="adminModalContent">
       <h3>ADMIN Access</h3>
@@ -215,7 +180,6 @@
       <button onclick="checkAdminPassword()">Submit</button>
     </div>
   </div>
-
   <div id="passwordModal">
     <div id="passwordModalContent">
       <h3>Enter Password</h3>
@@ -230,18 +194,15 @@
     const ably = new Ably.Realtime('DzH_IA.srBHdw:QKajb5GPaN6xCQLKHtZybph5FKAhBgA5rVtRQyj0Gn4');
     const channel = ably.channels.get('chat-room');
 
-    let hasJoined = false;
-    let locked = false;
-    let darkMode = false;
-
+    let hasJoined = false, locked = false, darkMode = false;
     const chatEl = document.getElementById('chat');
     const nameInput = document.getElementById('name');
     const messageInput = document.getElementById('message');
+    const recipientInput = document.getElementById('recipient');
     const typingIndicator = document.getElementById('typingIndicator');
     const passwordModal = document.getElementById('passwordModal');
     const adminModal = document.getElementById('adminModal');
 
-    // Predefined facts for !fact
     const facts = [
       "Honey never spoils.",
       "Bananas are berries, but strawberries aren’t.",
@@ -250,10 +211,7 @@
       "There are more trees on Earth than stars in the Milky Way."
     ];
 
-    // Show initial password modal
-    window.onload = () => {
-      passwordModal.style.display = 'flex';
-    };
+    window.onload = () => { passwordModal.style.display = 'flex'; };
 
     function checkPassword() {
       if (document.getElementById("passwordInput").value === "Goldfish3000") {
@@ -300,32 +258,34 @@
         channel.publish('stopTyping', { name: nameInput.value });
       }, 1000);
     });
-
     channel.subscribe('typing', msg => {
-      if (msg.data.name !== nameInput.value) {
-        typingIndicator.style.display = 'block';
-      }
+      if (msg.data.name !== nameInput.value) typingIndicator.style.display = 'block';
     });
     channel.subscribe('stopTyping', msg => {
-      if (msg.data.name !== nameInput.value) {
-        typingIndicator.style.display = 'none';
-      }
+      if (msg.data.name !== nameInput.value) typingIndicator.style.display = 'none';
     });
 
     function sendMessage() {
       const name = nameInput.value.trim();
       const raw = messageInput.value.trim();
+      const recipient = recipientInput.value.trim();
       if (!name || !raw) return;
 
-      // Lock check
       if (locked && name.toLowerCase() !== "admin") {
         alert("Chat is locked!");
         return;
       }
 
+      // Private message takes priority
+      if (recipient) {
+        channel.publish('private-message', { from: name, to: recipient, message: raw });
+        messageInput.value = "";
+        return;
+      }
+
       const cmd = raw.toUpperCase();
 
-      // === Everyone commands ===
+      // Everyone commands
       if (cmd === "!HELP") {
         channel.publish('message', {
           name: 'System',
@@ -345,103 +305,70 @@
       }
       if (cmd === "!FACT") {
         const fact = facts[Math.floor(Math.random() * facts.length)];
-        channel.publish('message', {
-          name: 'System',
-          message: fact
-        });
+        channel.publish('message', { name: 'System', message: fact });
         messageInput.value = "";
         return;
       }
 
-      // === Admin-only commands ===
+      // Admin-only commands
       if (name.toLowerCase() === "admin") {
-        if (cmd === "!CLEAR") {
-          channel.publish('clear', {});
-          messageInput.value = "";
-          return;
-        }
-        if (cmd === "!LOCK") {
-          channel.publish('lock', {});
-          messageInput.value = "";
-          return;
-        }
-        if (cmd === "!UNLOCK") {
-          channel.publish('unlock', {});
-          messageInput.value = "";
-          return;
-        }
-        if (cmd === "!THEME") {
-          channel.publish('theme', {});
-          messageInput.value = "";
-          return;
-        }
-        if (cmd === "!RESTART") {
-          channel.publish('restart', {});
-          messageInput.value = "";
-          return;
-        }
+        if (cmd === "!CLEAR") { channel.publish('clear', {}); messageInput.value = ""; return; }
+        if (cmd === "!LOCK")  { channel.publish('lock', {}); messageInput.value = ""; return; }
+        if (cmd === "!UNLOCK"){ channel.publish('unlock', {}); messageInput.value = ""; return; }
+        if (cmd === "!THEME") { channel.publish('theme', {}); messageInput.value = ""; return; }
+        if (cmd === "!RESTART"){ channel.publish('restart', {}); messageInput.value = ""; return; }
       }
 
-      // === Normal chat message ===
+      // Public message
       channel.publish('message', { name, message: raw });
       messageInput.value = "";
     }
 
-    // Helper to append a chat bubble
-    function appendMessage(name, text) {
+    // Append functions
+    function appendMessage(name, text, type='message') {
       const div = document.createElement('div');
-      div.classList.add('msg');
+      div.classList.add(type === 'message' ? 'msg' : type + '-msg');
       const up = name.toUpperCase();
-      if (up === 'ADMIN') {
-        div.classList.add('admin-msg');
-      } else if (name === 'System') {
-        div.classList.add('system-msg');
-      } else {
-        div.classList.add(
-          name === nameInput.value.trim() ? 'user-msg' : 'other-msg'
-        );
-      }
-      div.textContent = `${name}: ${text}`;
+      if (up === 'ADMIN')        div.classList.add('admin-msg');
+      else if (name === 'System')div.classList.add('system-msg');
+      else if (type === 'message')
+        div.classList.add(name === nameInput.value.trim() ? 'user-msg' : 'other-msg');
+
       if (darkMode) div.classList.add('dark-mode');
+      div.textContent = `${name}: ${text}`;
       chatEl.appendChild(div);
       chatEl.scrollTop = chatEl.scrollHeight;
     }
 
-    // === Subscriptions ===
-    channel.subscribe('message', msg => {
-      appendMessage(msg.data.name, msg.data.message);
-    });
+    function appendPrivate(data) {
+      const me = nameInput.value.trim();
+      if (data.to !== me && data.from !== me) return;
+      const div = document.createElement('div');
+      div.classList.add('private-msg');
+      if (darkMode) div.classList.add('dark-mode');
+      const label = `${data.from} → ${data.to}`;
+      div.textContent = `${label}: ${data.message}`;
+      // align mine to right
+      if (data.from === me) div.style.textAlign = 'right';
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
 
-    channel.subscribe('clear', () => {
-      chatEl.innerHTML = '';
-    });
+    // Subscriptions
+    channel.subscribe('message', msg => appendMessage(msg.data.name, msg.data.message, 'message'));
+    channel.subscribe('clear',   ()  => { chatEl.innerHTML = ''; });
+    channel.subscribe('lock',    ()  => { locked = true; appendMessage('System', 'Chat has been LOCKED by Admin 🔒', 'system'); });
+    channel.subscribe('unlock',  ()  => { locked = false; appendMessage('System', 'Chat has been UNLOCKED by Admin 🔓', 'system'); });
+    channel.subscribe('theme',   ()  => { toggleTheme(); appendMessage('System', 'Theme toggled by Admin 🌗', 'system'); });
+    channel.subscribe('restart', ()  => { alert("Admin triggered a restart. Refreshing..."); location.reload(); });
+    channel.subscribe('private-message', msg => appendPrivate(msg.data));
 
-    channel.subscribe('lock', () => {
-      locked = true;
-      appendMessage('System', 'Chat has been LOCKED by Admin 🔒');
-    });
-
-    channel.subscribe('unlock', () => {
-      locked = false;
-      appendMessage('System', 'Chat has been UNLOCKED by Admin 🔓');
-    });
-
-    channel.subscribe('theme', () => {
-      toggleTheme();
-      appendMessage('System', 'Theme was toggled by Admin 🌗');
-    });
-
-    channel.subscribe('restart', () => {
-      alert("Admin triggered a restart. Refreshing...");
-      location.reload();
-    });
-
-    // === Theme toggling ===
+    // Theme toggling
     function toggleTheme() {
       darkMode = !darkMode;
       document.body.classList.toggle('dark-mode', darkMode);
       document.querySelector('.container').classList.toggle('dark-mode', darkMode);
-      document.querySelectorAll('.msg').forEach(el => {
+      document.querySelectorAll('.msg, .private-msg').forEach(el => {
         el.classList.toggle('dark-mode', darkMode);
       });
     }
