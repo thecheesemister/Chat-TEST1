@@ -102,8 +102,8 @@
       display: none;
     }
 
-    /* Modal */
-    #adminModal {
+    /* Admin password modal */
+    #adminModal, #passwordModal {
       display: none;
       position: fixed;
       z-index: 9999;
@@ -111,12 +111,12 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 1); /* fully opaque */
+      background: rgba(0, 0, 0, 1); /* less opaque */
       justify-content: center;
       align-items: center;
     }
 
-    #adminModalContent {
+    #adminModalContent, #passwordModalContent {
       background: #fff;
       padding: 30px;
       border-radius: 10px;
@@ -125,17 +125,17 @@
       text-align: center;
     }
 
-    #adminModalContent h3 {
+    #adminModalContent h3, #passwordModalContent h3 {
       margin-bottom: 15px;
     }
 
-    #adminModalContent input {
+    #adminModalContent input, #passwordModalContent input {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
     }
 
-    #adminModalContent button {
+    #adminModalContent button, #passwordModalContent button {
       width: 100%;
       margin-top: 15px;
     }
@@ -208,6 +208,16 @@
     </div>
   </div>
 
+  <!-- Password modal for initial load -->
+  <div id="passwordModal">
+    <div id="passwordModalContent">
+      <h3>Enter Password</h3>
+      <p>Please enter the password:</p>
+      <input type="password" id="passwordInput" placeholder="Password" />
+      <button onclick="checkPassword()">Submit</button>
+    </div>
+  </div>
+
   <script src="https://cdn.ably.io/lib/ably.min-1.js"></script>
   <script>
     const ably = new Ably.Realtime('DzH_IA.srBHdw:QKajb5GPaN6xCQLKHtZybph5FKAhBgA5rVtRQyj0Gn4');
@@ -218,7 +228,23 @@
 
     const typingIndicator = document.getElementById('typingIndicator');
     const nameInput = document.getElementById("name");
+    const passwordModal = document.getElementById("passwordModal");
     const modal = document.getElementById("adminModal");
+
+    // Show password modal on load
+    window.onload = () => {
+      passwordModal.style.display = 'flex';
+    };
+
+    function checkPassword() {
+      const inputPass = document.getElementById("passwordInput").value;
+      if (inputPass === "Goldfish3000") {
+        passwordModal.style.display = "none";
+        alert("Password accepted!");
+      } else {
+        alert("Incorrect password.");
+      }
+    }
 
     // Validate username on blur
     nameInput.addEventListener("blur", function () {
