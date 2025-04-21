@@ -88,10 +88,6 @@
       background-color: #2980b9;
     }
 
-    #userList {
-      margin-top: 20px;
-    }
-
     #typingIndicator {
       font-style: italic;
       color: #3498db;
@@ -149,10 +145,6 @@
     <input id="message" placeholder="Type a message" />
     <button onclick="sendMessage()">Send</button>
     <button id="themeButton" onclick="toggleTheme()">Toggle Dark Mode</button>
-    <div id="userList">
-      <h3>Users Online</h3>
-      <ul id="users"></ul>
-    </div>
   </div>
 
   <!-- Ably SDK -->
@@ -164,10 +156,23 @@
 
     let typingTimeout;
     const typingIndicator = document.getElementById('typingIndicator');
-    const users = {};
+
+    // Check if the user entered "ADMIN" and prompt for password
+    document.getElementById("name").addEventListener("blur", function() {
+      const username = document.getElementById("name").value.trim();
+      if (username.toUpperCase() === "ADMIN") {
+        const password = prompt("Enter the password to continue:");
+        if (password !== "06182011$") {
+          alert("Incorrect password! Refreshing the page.");
+          location.reload(); // Refresh the page if password is incorrect
+        }
+      }
+    });
 
     // Notify presence when the user enters the chat
-    channel.presence.enter({ name: document.getElementById("name").value });
+    document.getElementById("name").addEventListener("input", function() {
+      channel.presence.enter({ name: document.getElementById("name").value });
+    });
 
     // Trigger when the user starts typing
     document.getElementById('message').addEventListener('input', () => {
@@ -191,29 +196,6 @@
         typingIndicator.style.display = 'none';
       }
     });
-
-    // Handle user entering the chat
-    channel.presence.subscribe('enter', (member) => {
-      users[member.clientId] = member.data.name;
-      updateUserList();
-    });
-
-    // Handle user leaving the chat
-    channel.presence.subscribe('leave', (member) => {
-      delete users[member.clientId];
-      updateUserList();
-    });
-
-    // Update the list of users online
-    function updateUserList() {
-      const userList = document.getElementById("users");
-      userList.innerHTML = "";
-      Object.values(users).forEach(user => {
-        const li = document.createElement("li");
-        li.textContent = user;
-        userList.appendChild(li);
-      });
-    }
 
     function sendMessage() {
       const name = document.getElementById("name").value;
